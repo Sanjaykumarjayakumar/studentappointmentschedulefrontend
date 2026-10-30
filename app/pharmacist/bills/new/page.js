@@ -18,6 +18,7 @@ export default function CreatePatientBillPage() {
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [searchingPatients, setSearchingPatients] = useState(false);
   const [lines, setLines] = useState([newLine()]);
+  const [activeMedicineIndex, setActiveMedicineIndex] = useState(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -56,7 +57,6 @@ export default function CreatePatientBillPage() {
   }, [patientQuery, selectedPatient]);
 
   const updateLine = (index, values) => setLines((current) => current.map((line, i) => i === index ? { ...line, ...values } : line));
-  const listId = "bill-medicine-options";
   const selectedMedicines = useMemo(() => new Map(medicines.map((medicine) => [medicine._id, medicine])), [medicines]);
   const billTotal = useMemo(() => {
     let totalCents = 0;
@@ -119,7 +119,7 @@ export default function CreatePatientBillPage() {
       <PageHeader title="Create bill" subtitle="Select a patient and add the medicines to dispense." />
 
       <form className="panel space-y-6 p-5 sm:p-6" onSubmit={submit}>
-        <Field label="Patient" hint="Search by patient name or email, then select a matching patient.">
+        <Field label="Patient">
           <input
             className="input"
             value={patientQuery}
@@ -134,7 +134,6 @@ export default function CreatePatientBillPage() {
             aria-autocomplete="list"
             aria-expanded={patients.length > 0}
           />
-          {selectedPatient && <p className="mt-1 text-sm font-semibold text-brand-700">Selected: {selectedPatient.name} ({selectedPatient.email})</p>}
           {searchingPatients && <p className="mt-2 text-sm text-brand-800/70">Searching patients...</p>}
           {!searchingPatients && patientQuery.trim().length >= 2 && !selectedPatient && patients.length === 0 && (
             <p className="mt-2 text-sm text-brand-800/70">No matching patients found.</p>
@@ -161,32 +160,64 @@ export default function CreatePatientBillPage() {
           )}
         </Field>
 
-        <datalist id={listId}>
-          {medicines.map((medicine) => (
-            <option key={medicine._id} value={medicine.name} label={`${num(medicine.stockQuantity)} ${medicine.unit || "units"} in stock · ${Number.isFinite(medicine.price) ? medicine.price.toFixed(2) : "price not set"}`} />
-          ))}
-        </datalist>
-
         <div>
           <h2 className="mb-3 font-bold text-ink">Medicines</h2>
           <div className="space-y-3">
             {lines.map((line, index) => {
               const medicine = selectedMedicines.get(line.medicineId);
+              const medicineOptions = medicines.filter((item) =>
+                item.name.toLowerCase().includes(line.medicineName.trim().toLowerCase())
+              );
+              const medicineListId = `bill-medicine-options-${index}`;
               return (
                 <div key={index} className="grid gap-3 rounded-xl border border-brand-100 p-4 sm:grid-cols-[minmax(0,1fr)_10rem_auto] sm:items-end">
                   <Field label={`Medicine ${index + 1}`}>
-                    <input
-                      className="input"
-                      list={listId}
-                      value={line.medicineName}
-                      onChange={(event) => {
-                        const medicineName = event.target.value;
-                        const match = medicines.find((item) => item.name.toLowerCase() === medicineName.trim().toLowerCase());
-                        updateLine(index, { medicineName, medicineId: match?._id || "" });
-                      }}
-                      placeholder="Enter medicine name"
-                      autoComplete="off"
-                    />
+                    <div className="relative">
+                      <input
+                        className="input"
+                        value={line.medicineName}
+                        onChange={(event) => updateLine(index, { medicineName: event.target.value, medicineId: "" })}
+                        onFocus={() => setActiveMedicineIndex(index)}
+                        onBlur={() => setActiveMedicineIndex(null)}
+                        placeholder="Search medicines"
+                        autoComplete="off"
+                        role="combobox"
+                        aria-autocomplete="list"
+                        aria-expanded={activeMedicineIndex === index}
+                        aria-controls={medicineListId}
+                      />
+                      {activeMedicineIndex === index && (
+                        <div
+                          id={medicineListId}
+                          role="listbox"
+                          aria-label={`Matching medicines for medicine ${index + 1}`}
+                          className="absolute z-10 mt-1 max-h-60 w-full overflow-y-auto rounded-lg border border-brand-200 bg-white shadow-lg"
+                        >
+                          {medicineOptions.length > 0 ? medicineOptions.map((option) => (
+                            <button
+                              key={option._id}
+                              type="button"
+                              role="option"
+                              aria-selected={option._id === line.medicineId}
+                              className="block w-full px-3 py-2 text-left hover:bg-brand-50 focus:bg-brand-50 focus:outline-none"
+                              onMouseDown={(event) => event.preventDefault()}
+                              onClick={() => {
+                                updateLine(index, { medicineName: option.name, medicineId: option._id });
+                                setActiveMedicineIndex(null);
+                              }}
+                            >
+                              <span className="block text-sm font-semibold text-ink">{option.name}</span>
+                              <span className="block text-xs text-brand-800/70">
+                                {num(option.stockQuantity)} {option.unit || "units"} in stock
+                                {Number.isFinite(option.price) ? ` · ${option.price.toFixed(2)} per ${option.unit || "unit"}` : " · Price not set"}
+                              </span>
+                            </button>
+                          )) : (
+                            <p className="px-3 py-2 text-sm text-brand-800/70">No matching medicines found.</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
                     {medicine && (
                       <p className="mt-1 text-xs text-brand-800/70">
                         In stock: {num(medicine.stockQuantity)} {medicine.unit || "units"}

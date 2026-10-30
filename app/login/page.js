@@ -176,9 +176,6 @@ export default function LoginPage() {
               </Link>
             </p>
           </div>
-          <p className="mt-3 text-center text-xs text-brand-800/50">
-            BIT Student Health Center · Secure account access
-          </p>
         </section>
       </main>
     </div>
