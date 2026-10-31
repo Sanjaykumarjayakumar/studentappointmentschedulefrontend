@@ -133,7 +133,7 @@ export default function BookDoctorAppointmentPage() {
                       <span>
                         <span className="flex items-center gap-2 font-semibold"><FiClock /> {timeRange(slot.startTime, slot.endTime)}</span>
                         <span className={`mt-1 block text-xs ${selected ? "text-brand-100" : "text-brand-800/60"}`}>
-                          {open ? `${Math.max(num(slot.maxAppointments) - num(slot.bookedAppointments), 0)} spots left` : "Full"}
+                          {open ? "Available" : "Full"}
                         </span>
                       </span>
                       <span className="text-xs font-semibold">{open ? "Select" : "Unavailable"}</span>

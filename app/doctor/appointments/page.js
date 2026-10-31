@@ -235,7 +235,7 @@ export default function DoctorAppointmentsPage() {
                 <option value="">Select a slot</option>
                 {bookable.map((s) => (
                   <option key={s._id} value={s._id}>
-                    {timeRange(s.startTime, s.endTime)} ({num(s.maxAppointments) - num(s.bookedAppointments)} left)
+                    {timeRange(s.startTime, s.endTime)}
                   </option>
                 ))}
               </select>
